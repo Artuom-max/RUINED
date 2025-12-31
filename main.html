@@ -126,6 +126,10 @@
         <div class="click-counter" id="counter">Use Y: 5 times</div>
     </div>
 
+    <audio id="clickSound" preload="auto">
+        <source src="C_sound/sound.mp3" type="audio/mpeg">
+    </audio>
+
     <script>
         // ╔════════════════════════════════════════════════════════════╗
         // ║                      SETTINGS                             ║
@@ -143,6 +147,9 @@
             SHORT_SHAKE_INTENSITY: 15,
             SHORT_SHAKE_SPEED: 11,
             
+            // ──────────── SOUND ────────────
+            CLICK_SOUND_VOLUME: 1.0,
+            
             // ──────────── DELAY ────────────
             DELAY_BEFORE_MOVES: 12000,
             
@@ -152,7 +159,7 @@
             SNAP_MOVE_DURATION: 300,       
             SNAP_REPEAT_COUNT: 4,          
             
-            // ──────────── SNAKE 1 ────────────
+            // ──────────── SHAKE 1 ────────────
             SHAKE_1_DURATION: 38000,
             SHAKE_1_INTENSITY: 10,
             SHAKE_1_SPEED: 13,
@@ -186,6 +193,14 @@
         const btnExit = document.getElementById('btnExit');
         const btnProceed = document.getElementById('btnProceed');
         const counter = document.getElementById('counter');
+        const clickSound = document.getElementById('clickSound');
+
+        clickSound.volume = CONFIG.CLICK_SOUND_VOLUME;
+
+        function playClickSound() {
+            clickSound.currentTime = 0;
+            clickSound.play().catch(() => {});
+        }
 
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
@@ -345,11 +360,13 @@
         }
 
         btnExit.addEventListener('click', function() {
+            playClickSound();
             window.close();
         });
 
         btnProceed.addEventListener('click', async function() {
             if (isRunning) return;
+            playClickSound();
             
             clickCount++;
             const remaining = CONFIG.REQUIRED_CLICKS - clickCount;
