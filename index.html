@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Start</title>
+    <style>
+        body {
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        button {
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 30px 60px;
+            font-size: 32px;
+            cursor: pointer;
+            font-family: Arial Black, sans-serif;
+            transition: all 0.3s;
+            outline: none;
+        }
+        button:hover {
+            background: #cc0000;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <button onclick="launchSite()">START</button>
+
+    <script>
+        let popupWindow = null;
+
+        function launchSite() {
+            if (popupWindow && !popupWindow.closed) {
+                popupWindow.focus();
+                return;
+            }
+
+            const screenW = screen.availWidth;
+            const screenH = screen.availHeight;
+            const winW = 500;
+            const winH = 350;
+            const left = Math.floor((screenW - winW) / 2);
+            const top = Math.floor((screenH - winH) / 2);
+
+            popupWindow = window.open(
+                'main.html',
+                'RUINED_WINDOW',
+                `width=${winW},height=${winH},left=${left},top=${top},resizable=no,scrollbars=no,menubar=no,toolbar=no,location=no,status=no`
+            );
+            
+            if (!popupWindow) {
+                alert('Allow pop-ups for this site!');
+            }
+        }
+    </script>
+</body>
+</html>

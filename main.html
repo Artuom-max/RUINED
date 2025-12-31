@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>RUINED SONG CREDITS:davezilly, i am;BARANMUZU.</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            outline: none !important;
+            border: none;
+        }
+
+        body {
+            background-color: #000;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+
+        .warning-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .warning-title {
+            color: #ffffff;
+            font-family: 'Arial Black', sans-serif;
+            font-size: 52px;
+            font-weight: bold;
+            margin-bottom: 50px;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+            letter-spacing: 10px;
+        }
+
+        .buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .btn {
+            font-family: 'Arial Black', sans-serif;
+            font-size: 18px;
+            padding: 18px 40px;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 280px;
+        }
+
+        .btn-exit {
+            color: #ff0000;
+        }
+
+        .btn-exit:hover {
+            text-shadow: 0 0 30px #ff0000;
+            transform: scale(1.1);
+        }
+
+        .btn-proceed {
+            color: #00ff00;
+        }
+
+        .btn-proceed:hover {
+            text-shadow: 0 0 30px #00ff00;
+            transform: scale(1.1);
+        }
+
+        .click-counter {
+            color: #888;
+            font-size: 16px;
+            margin-top: 30px;
+        }
+
+        .video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+        }
+
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container hidden" id="videoContainer">
+        <video id="mainVideo">
+            <source src="media/video.mp4" type="video/mp4">
+            <source src="media/video.webm" type="video/webm">
+        </video>
+    </div>
+
+    <div class="warning-overlay" id="warning">
+        <h1 class="warning-title">RUINED</h1>
+        <div class="buttons-container">
+            <button class="btn btn-exit" id="btnExit">N = Exit the site</button>
+            <button class="btn btn-proceed" id="btnProceed">Y = Proceed</button>
+        </div>
+        <div class="click-counter" id="counter">Use Y: 5 times</div>
+    </div>
+
+    <script>
+        // ╔════════════════════════════════════════════════════════════╗
+        // ║                      SETTINGS                             ║
+        // ╚════════════════════════════════════════════════════════════╝
+        
+        const CONFIG = {
+            
+            // ──────────── WINDOW ────────────
+            WIN_WIDTH: 500,
+            WIN_HEIGHT: 345,
+            
+            // ────────────USE Y ────────────
+            REQUIRED_CLICKS: 5,
+            SHORT_SHAKE_DURATION: 500,
+            SHORT_SHAKE_INTENSITY: 15,
+            SHORT_SHAKE_SPEED: 11,
+            
+            // ──────────── DELAY ────────────
+            DELAY_BEFORE_MOVES: 12000,
+            
+            // ──────────── SNAP ────────────
+            SNAP_DISTANCE_X: 600,
+            SNAP_DISTANCE_Y: 600,
+            SNAP_MOVE_DURATION: 300,       
+            SNAP_REPEAT_COUNT: 4,          
+            
+            // ──────────── SNAKE 1 ────────────
+            SHAKE_1_DURATION: 38000,
+            SHAKE_1_INTENSITY: 10,
+            SHAKE_1_SPEED: 13,
+            
+            // ──────────── CORNER FLY ────────────
+            CORNER_FLY_TIMES: 5,
+            CORNER_FLY_DURATION: 200,      
+            CORNER_OFFSET_X: 0,
+            CORNER_OFFSET_Y: 0,
+            
+            // ──────────── SHAKE 2 ────────────
+            SHAKE_2_DURATION: 19000,
+            SHAKE_2_INTENSITY: 10,
+            SHAKE_2_SPEED: 13,
+            
+            // ──────────── IDLE BEFORE CLOSE ────────────
+            IDLE_BEFORE_CLOSE: 58000
+        };
+        
+        // ╔════════════════════════════════════════════════════════════╗
+        // ║                     CODE                                   ║
+        // ╚════════════════════════════════════════════════════════════╝
+
+        let isRunning = false;
+        let clickCount = 0;
+        let centerX, centerY;
+        
+        const warning = document.getElementById('warning');
+        const videoContainer = document.getElementById('videoContainer');
+        const mainVideo = document.getElementById('mainVideo');
+        const btnExit = document.getElementById('btnExit');
+        const btnProceed = document.getElementById('btnProceed');
+        const counter = document.getElementById('counter');
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function saveCenter() {
+            centerX = Math.floor((screen.availWidth - CONFIG.WIN_WIDTH) / 2);
+            centerY = Math.floor((screen.availHeight - CONFIG.WIN_HEIGHT) / 2);
+        }
+
+        function returnToCenter() {
+            window.moveTo(centerX, centerY);
+        }
+
+        async function fastMove(targetX, targetY, duration) {
+            const steps = Math.max(10, Math.floor(duration / 16));
+            const stepTime = duration / steps;
+            
+            const startX = window.screenX;
+            const startY = window.screenY;
+            const deltaX = targetX - startX;
+            const deltaY = targetY - startY;
+
+            for (let i = 1; i <= steps; i++) {
+                const t = i / steps;
+                const currentX = Math.round(startX + deltaX * t);
+                const currentY = Math.round(startY + deltaY * t);
+                
+                window.moveTo(currentX, currentY);
+                await sleep(stepTime);
+            }
+        }
+
+        async function snapToAndBack(deltaX, deltaY) {
+            const targetX = centerX + deltaX;
+            const targetY = centerY + deltaY;
+            
+            await fastMove(targetX, targetY, CONFIG.SNAP_MOVE_DURATION);
+            await fastMove(centerX, centerY, CONFIG.SNAP_MOVE_DURATION);
+        }
+
+        async function repeatLeft() {
+            const dx = CONFIG.SNAP_DISTANCE_X;
+            for (let i = 0; i < CONFIG.SNAP_REPEAT_COUNT; i++) {
+                await snapToAndBack(-dx, 0);
+            }
+        }
+
+        async function repeatRight() {
+            const dx = CONFIG.SNAP_DISTANCE_X;
+            for (let i = 0; i < CONFIG.SNAP_REPEAT_COUNT; i++) {
+                await snapToAndBack(dx, 0);
+            }
+        }
+
+        async function repeatDown() {
+            const dy = CONFIG.SNAP_DISTANCE_Y;
+            for (let i = 0; i < CONFIG.SNAP_REPEAT_COUNT; i++) {
+                await snapToAndBack(0, dy);
+            }
+        }
+
+        async function repeatUp() {
+            const dy = CONFIG.SNAP_DISTANCE_Y;
+            for (let i = 0; i < CONFIG.SNAP_REPEAT_COUNT; i++) {
+                await snapToAndBack(0, -dy);
+            }
+        }
+
+        async function doAllSnaps() {
+            await repeatLeft();   
+            await repeatDown();   
+            await repeatRight();  
+            await repeatUp();     
+        }
+
+        async function flyToCorners() {
+            const screenW = screen.availWidth;
+            const screenH = screen.availHeight;
+            const flyTime = CONFIG.CORNER_FLY_DURATION;
+            const offX = CONFIG.CORNER_OFFSET_X;
+            const offY = CONFIG.CORNER_OFFSET_Y;
+
+            const topLeft = { x: offX, y: offY };
+            const topRight = { x: screenW - CONFIG.WIN_WIDTH - offX, y: offY };
+            const bottomLeft = { x: offX, y: screenH - CONFIG.WIN_HEIGHT - offY };
+            const bottomRight = { x: screenW - CONFIG.WIN_WIDTH - offX, y: screenH - CONFIG.WIN_HEIGHT - offY };
+
+            for (let round = 0; round < CONFIG.CORNER_FLY_TIMES; round++) {
+                await fastMove(topLeft.x, topLeft.y, flyTime);         
+                await fastMove(bottomRight.x, bottomRight.y, flyTime); 
+                await fastMove(bottomLeft.x, bottomLeft.y, flyTime);   
+                await fastMove(topRight.x, topRight.y, flyTime);       
+                await fastMove(centerX, centerY, flyTime);             
+            }
+        }
+		
+        async function shakeWindowInPlace(durationMs, intensity, speed) {
+            const startTime = Date.now();
+
+            while (Date.now() - startTime < durationMs) {
+                const offsetX = Math.floor((Math.random() - 0.5) * intensity * 2);
+                const offsetY = Math.floor((Math.random() - 0.5) * intensity * 2);
+                
+                window.moveTo(centerX + offsetX, centerY + offsetY);
+                await sleep(speed);
+            }
+            
+            returnToCenter();
+        }
+
+        async function shortShakeInPlace() {
+            saveCenter();
+            const startTime = Date.now();
+
+            while (Date.now() - startTime < CONFIG.SHORT_SHAKE_DURATION) {
+                const offsetX = Math.floor((Math.random() - 0.5) * CONFIG.SHORT_SHAKE_INTENSITY * 2);
+                const offsetY = Math.floor((Math.random() - 0.5) * CONFIG.SHORT_SHAKE_INTENSITY * 2);
+                
+                window.moveTo(centerX + offsetX, centerY + offsetY);
+                await sleep(CONFIG.SHORT_SHAKE_SPEED);
+            }
+            
+            returnToCenter();
+        }
+
+        async function runFullSequence() {
+            if (isRunning) return;
+            isRunning = true;
+            
+            saveCenter();
+            
+            videoContainer.classList.remove('hidden');
+            mainVideo.play().catch(() => {});
+
+            await sleep(CONFIG.DELAY_BEFORE_MOVES);
+
+            await doAllSnaps();
+
+            await shakeWindowInPlace(
+                CONFIG.SHAKE_1_DURATION, 
+                CONFIG.SHAKE_1_INTENSITY, 
+                CONFIG.SHAKE_1_SPEED
+            );
+
+            await flyToCorners();
+
+            await shakeWindowInPlace(
+                CONFIG.SHAKE_2_DURATION, 
+                CONFIG.SHAKE_2_INTENSITY, 
+                CONFIG.SHAKE_2_SPEED
+            );
+
+            await sleep(CONFIG.IDLE_BEFORE_CLOSE);
+
+            window.close();
+        }
+
+        btnExit.addEventListener('click', function() {
+            window.close();
+        });
+
+        btnProceed.addEventListener('click', async function() {
+            if (isRunning) return;
+            
+            clickCount++;
+            const remaining = CONFIG.REQUIRED_CLICKS - clickCount;
+
+            await shortShakeInPlace();
+
+            if (remaining > 0) {
+                counter.textContent = `use Y: ${remaining} times`;
+            } else {
+                warning.classList.add('hidden');
+                runFullSequence();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (warning.classList.contains('hidden')) return;
+            if (isRunning) return;
+            
+            const key = e.key.toLowerCase();
+            
+            if (key === 'n' || key === 'т') {
+                btnExit.click();
+            } else if (key === 'y' || key === 'н') {
+                btnProceed.click();
+            }
+        });
+
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        window.onload = function() {
+            saveCenter();
+            returnToCenter();
+        };
+    </script>
+</body>
+</html>
